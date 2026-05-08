@@ -2,6 +2,7 @@
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BME280.h>
 #include <avr/wdt.h>
+#include <avr/xmega.h> // Required for protected writes on megaAVR
 
 // Pin Definitions
 const int G3X_MESSAGE_PIN = 2; // Discrete Output to G3X PFD
@@ -32,11 +33,14 @@ void setup() {
   lastSuccessfulRead = millis();
   
   // Enable internal hardware watchdog (8 seconds)
-  wdt_enable(WDTO_8S); 
+  // On Nano Every, we must use the CCP (Configuration Change Protection) 
+  // to write to the Watchdog CTRLA register.
+  // WDT_PERIOD_8KCLK_gc provides roughly an 8-second timeout.
+  _PROTECTED_WRITE(WDT.CTRLA, WDT_PERIOD_8KCLK_gc);
 }
 
 void loop() {
-  wdt_reset(); // Signal MCU that code is running fine
+  wdt_reset();
 
   float oat = bme.readTemperature();
   float rh = bme.readHumidity();
